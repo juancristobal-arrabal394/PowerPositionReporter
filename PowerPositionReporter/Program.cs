@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Axpo;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 // Setup DI
+builder.Services.AddSingleton<IPowerService, PowerService>();
 builder.Services.AddSingleton<TradeService>();
 builder.Services.AddSingleton<ReportGenerator>();
 
@@ -31,9 +33,11 @@ try
 
     // Date parsing logic
     DateTime reportDate =  DateTime.UtcNow;
+   // DateTime reportDate = DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Local);
     if (args.Length > 0 && DateTime.TryParse(args[0], out var parsedDate))
     {
         reportDate = parsedDate;
+        //reportDate = DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Local);
     }
     else
     {

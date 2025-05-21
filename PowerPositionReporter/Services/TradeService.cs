@@ -1,12 +1,15 @@
 using Axpo;
 using PowerPositionReporter.Models;
 
-
-
 namespace PowerPositionReporter.Services
 {
     public class TradeService
-    {
+        {
+        private readonly IPowerService _powerService;
+        public TradeService(IPowerService powerService)
+        {
+            _powerService = powerService;
+        }
         public IEnumerable<Trade> GetTradesForToday(DateTime date)
         {
            // var now = DateTime.UtcNow;
@@ -17,34 +20,39 @@ namespace PowerPositionReporter.Services
                 yield return new Trade
                 {
                     UtcTimestamp = start.AddHours(i),
-                    Volume = (int)Math.Round(random.NextDouble() * 100, 0)
+                    Volume = Math.Round(random.NextDouble() * 100, 0)
                 };
 
             }
         }
 
-        public async Task<IEnumerable<Trade>> GetTradesForTodayExternal(DateTime date)
+        public IEnumerable<Trade> GetTradesByPowerService(DateTime date)
         {
             // 1. Instantiate the service class from PowerService
-            var powerService = new PowerService();
-            var powertrade = await powerService.GetTradesAsync(date);
-            var tradesext = new List<Trade>();
+            var powerTrades =  _powerService.GetTrades(date);
+            var trades = new List<Trade>();
            
             var start = date.Date.AddDays(-1).AddHours(23); // 23:00 on previous day
 
-            foreach (dynamic tra in powertrade)
+            foreach (var trade in powerTrades)
             {
-                foreach (dynamic pe in tra.Periods)
+                foreach (var period in trade.Periods)
                 {
+                    int periodNum = period.Period;
+                    double volume = period.Volume;
 
-                    int periodNum = pe.Period;
-                    int volume = pe.Volume;
-                    DateTime timestamp = start.AddHours(periodNum - 1);
-                    tradesext.Add(new Trade { UtcTimestamp = timestamp.ToUniversalTime(), Volume = volume });
+                    DateTime localTimestamp = start.AddHours(periodNum - 1);
+                    DateTime utcTimestamp = TimeZoneInfo.ConvertTimeToUtc(localTimestamp, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"));
+
+                    trades.Add(new Trade
+                    {
+                        UtcTimestamp = utcTimestamp,
+                        Volume = volume
+                    });
                 }
             }
-                        
-            return tradesext;
+
+                return trades;
 
         }
     }
