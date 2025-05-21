@@ -29,12 +29,23 @@ try
     var londonTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
         RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "GMT Standard Time" : "Europe/London");
 
-    var trades = host.Services.GetRequiredService<TradeService>().GetTradesForToday();
+    // Date parsing logic
+    DateTime reportDate =  DateTime.UtcNow;
+    if (args.Length > 0 && DateTime.TryParse(args[0], out var parsedDate))
+    {
+        reportDate = parsedDate;
+    }
+    else
+    {
+        logger.LogInformation("No valid date argument provided. Using today's date.");
+    }
+
+    var trades = host.Services.GetRequiredService<TradeService>().GetTradesForToday(reportDate);
     var generator = host.Services.GetRequiredService<ReportGenerator>();
 
-    if (args.Length > 0 && Directory.Exists(args[0]))
+    if (args.Length > 1 && Directory.Exists(args[1]))
     {
-        outputFolder = args[0];
+        outputFolder = args[1];
     }
 
     if (string.IsNullOrEmpty(outputFolder))

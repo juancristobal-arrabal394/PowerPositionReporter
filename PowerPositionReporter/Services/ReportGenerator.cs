@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using PowerPositionReporter.Models;
-using System.Globalization;
 
 namespace PowerPositionReporter.Services
 {
