@@ -26,34 +26,53 @@ namespace PowerPositionReporter.Services
             }
         }
 
-        public IEnumerable<Trade> GetTradesByPowerService(DateTime date)
+        
+        public IEnumerable<Trade> GetTradesByPowerSvc(DateTime date)
         {
-            // 1. Instantiate the service class from PowerService
-            var powerTrades =  _powerService.GetTrades(date);
             var trades = new List<Trade>();
-           
-            var start = date.Date.AddDays(-1).AddHours(23); // 23:00 on previous day
+            var powerTrades = _powerService.GetTrades(date);
+
+            // Start time is 23:00 of the previous day in local time
+            var localStart = TimeZoneInfo.ConvertTimeToUtc(date.Date.AddDays(-1).AddHours(23),
+                TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"));
+
+            var periodVolumes = new Dictionary<int, double>();
+
+            for (int i = 1; i <= 23; i++)
+            {
+                periodVolumes[i] = 0;
+            }
 
             foreach (var trade in powerTrades)
             {
                 foreach (var period in trade.Periods)
                 {
-                    int periodNum = period.Period;
-                    double volume = period.Volume;
-
-                    DateTime localTimestamp = start.AddHours(periodNum - 1);
-                    DateTime utcTimestamp = TimeZoneInfo.ConvertTimeToUtc(localTimestamp, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"));
-
-                    trades.Add(new Trade
+                    if (periodVolumes.ContainsKey(period.Period))
                     {
-                        UtcTimestamp = utcTimestamp,
-                        Volume = volume
-                    });
+                        periodVolumes[period.Period] += period.Volume;
+                    }
                 }
             }
 
-                return trades;
+            // Create trade objects from aggregated periods
+            foreach (var kvp in periodVolumes.OrderBy(p => p.Key))
+            {
+                int period = kvp.Key;
+                double volume = kvp.Value;
 
+                DateTime localTime = date.Date.AddDays(-1).AddHours(22 + period); // 23 + (period - 1)
+
+                var utcTimestamp = TimeZoneInfo.ConvertTimeToUtc(localTime, TimeZoneInfo.FindSystemTimeZoneById("GMT Standard Time"));
+
+                trades.Add(new Trade
+                {
+                    UtcTimestamp = utcTimestamp,
+                    Volume = volume
+                });
+            }
+
+            return trades;
         }
+
     }
 }
